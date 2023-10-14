@@ -6,6 +6,9 @@ import { envConfiguration } from '../config/env.config';
 import { JoiValidationSchema } from '../config/joi.validation';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
+import { NotesModule } from './notes/notes.module';
+import { TagsModule } from './tags/tags.module';
+import { ImagesModule } from './images/images.module';
 
 @Module({
     imports: [
@@ -24,6 +27,9 @@ import { AuthModule } from './auth/auth.module';
             synchronize: true,
         }),
         AuthModule,
+        NotesModule,
+        TagsModule,
+        ImagesModule,
     ],
     controllers: [AppController],
     providers: [AppService],

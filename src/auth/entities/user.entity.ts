@@ -1,4 +1,7 @@
-import { BeforeInsert, BeforeUpdate, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BeforeInsert, BeforeUpdate, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Note } from '../../notes/entities/note.entity';
+import { Tag } from '../../tags/entities/tag.entity';
+import { Image } from '../../images/entities/images.entity';
 
 @Entity()
 export class User {
@@ -11,6 +14,15 @@ export class User {
 
     @Column('varchar', { select: false })
     password: string;
+
+    @OneToMany(() => Note, note => note.user)
+    notes: Note[];
+
+    @OneToMany(() => Tag, tag => tag.user)
+    tags: Tag[];
+
+    @OneToMany(() => Image, image => image.user)
+    images: Image[];
 
     @BeforeInsert()
     checkFieldsBeforeInsert() {

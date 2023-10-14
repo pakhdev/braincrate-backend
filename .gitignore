@@ -5,6 +5,7 @@
 *.env
 .eslintrc.js
 .prettierrc
+public/image_files/*.jpg
 
 # Logs
 logs
