@@ -11,6 +11,7 @@ import {
 import { User } from '../../auth/entities/user.entity';
 import { Tag } from '../../tags/entities/tag.entity';
 import { Image } from '../../images/entities/images.entity';
+import { Difficulty } from '../../reviews/enums/difficulty.enum';
 
 @Entity()
 export class Note {
@@ -24,7 +25,8 @@ export class Note {
     @Column('text', { nullable: false })
     content: string;
 
-    // REVIEWS MODE?
+    @Column({ type: 'enum', enum: Difficulty, default: Difficulty.None })
+    difficulty: Difficulty;
 
     @Column({ nullable: false })
     reviewsLeft: number;

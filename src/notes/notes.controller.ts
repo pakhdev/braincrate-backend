@@ -1,12 +1,11 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, ParseIntPipe } from '@nestjs/common';
 import { NotesService } from './notes.service';
-import { CreateNoteDto, UpdateNoteDto } from './dto';
+import { CreateNoteDto, GetNotesDto, GetNotesForReviewDto, UpdateNoteDto } from './dto';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { User } from '../auth/entities/user.entity';
-import { PaginationDto } from '../common/dto/pagination.dto';
-import { GetNotesDto } from './dto/get-notes.dto';
-import { GetNotesForReviewDto } from './dto/get-notes-for-review.dto';
+
+// TODO: Reviewed At
 
 @Controller('notes')
 @UseGuards(AuthGuard())
@@ -36,6 +35,21 @@ export class NotesController {
     @Patch(':id')
     update(@Param('id', ParseIntPipe) id: string, @Body() updateNoteDto: UpdateNoteDto, @GetUser() user: User) {
         return this.notesService.update(+id, updateNoteDto, user);
+    }
+
+    @Patch('mark-as-reviewed/:id')
+    markAsReviewed(@Param('id', ParseIntPipe) id: string, @GetUser() user: User) {
+        return this.notesService.updateNoteReviewStatus(+id, user, 'markAsReviewed');
+    }
+
+    @Patch('cancel-reviews/:id')
+    cancelReviews(@Param('id', ParseIntPipe) id: string, @GetUser() user: User) {
+        return this.notesService.updateNoteReviewStatus(+id, user, 'cancelReviews');
+    }
+
+    @Patch('reset-reviews-count/:id')
+    resetReviewsCount(@Param('id', ParseIntPipe) id: string, @GetUser() user: User) {
+        return this.notesService.updateNoteReviewStatus(+id, user, 'resetReviewsCount');
     }
 
     @Patch('restore/:id')

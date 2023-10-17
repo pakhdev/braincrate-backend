@@ -7,6 +7,7 @@ import { ImagesModule } from '../images/images.module';
 import { NotesController } from './notes.controller';
 import { NotesService } from './notes.service';
 import { Note } from './entities/note.entity';
+import { ReviewsModule } from '../reviews/reviews.module';
 
 @Module({
     imports: [
@@ -14,6 +15,7 @@ import { Note } from './entities/note.entity';
         TagsModule,
         ImagesModule,
         AuthModule,
+        ReviewsModule,
     ],
     controllers: [NotesController],
     providers: [NotesService],

@@ -1,4 +1,5 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsString, MaxLength, MinLength } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsNumberString, IsString, MinLength } from 'class-validator';
+import { Difficulty } from '../../reviews/enums/difficulty.enum';
 
 export class CreateNoteDto {
 
@@ -15,5 +16,8 @@ export class CreateNoteDto {
     @IsString({ each: true })
     @MinLength(2, { each: true })
     tags: string[];
+
+    @IsNumberString()
+    difficulty: Difficulty;
 
 }

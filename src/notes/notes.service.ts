@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { CreateNoteDto, GetNotesDto, GetNotesForReviewDto, NoteOperationResponseDto, UpdateNoteDto } from './dto';
 import { ImagesService } from '../images/images.service';
+import { ReviewsService } from '../reviews/reviews.service';
 import { TagsService } from '../tags/tags.service';
 import { Note } from './entities/note.entity';
 import { User } from '../auth/entities/user.entity';
@@ -15,27 +16,35 @@ export class NotesService {
         @InjectRepository(Note) private readonly notesRepository: Repository<Note>,
         private readonly tagsService: TagsService,
         private readonly imagesService: ImagesService,
+        private readonly reviewsService: ReviewsService,
     ) {}
 
     async create(createNoteDto: CreateNoteDto, user: User): Promise<NoteOperationResponseDto> {
-        // TODO: add reviews options
-        const reviewsLeft = 5;
+
+        const { title, content, difficulty, tags } = createNoteDto;
+
+        const reviewsLeft = this.reviewsService.getNumberOfReviewsForDifficulty(+difficulty);
+        const nextReviewAt = reviewsLeft > 0
+            ? this.reviewsService.getNextReviewDate(+difficulty, reviewsLeft)
+            : null;
 
         try {
             const {
                 noteHtml,
                 noteImages,
-            } = await this.imagesService.processAndManageImagesInHTML(createNoteDto.content, null, user);
+            } = await this.imagesService.processAndManageImagesInHTML(content, null, user);
             const {
                 resultTags,
                 touchedTags,
-            } = await this.tagsService.prepareTagsList([], createNoteDto.tags, user);
+            } = await this.tagsService.prepareTagsList([], tags, user);
             const newNote = this.notesRepository.create({
-                title: createNoteDto.title,
+                title: title,
                 content: noteHtml,
                 reviewsLeft,
+                nextReviewAt,
                 tags: resultTags,
                 images: noteImages,
+                difficulty: +difficulty,
                 user,
             });
             const createdNote = await this.notesRepository.save(newNote);
@@ -105,6 +114,41 @@ export class NotesService {
             const updatedNote = await this.notesRepository.save(note);
             await this.imagesService.clearOrphanedImages(previouslyUploadedIds, noteImages);
             return { errors: null, note: updatedNote, tags: touchedTags };
+        } catch (error) {
+            return { errors: error.message, note: null, tags: null };
+        }
+    }
+
+    async updateNoteReviewStatus(id: number, user: User, action: string): Promise<NoteOperationResponseDto> {
+        try {
+            let note = await this.findOneById(id, user);
+            const { difficulty } = note;
+            let reviewsLeft = note.reviewsLeft;
+            let nextReviewAt: null | Date;
+
+            switch (action) {
+                case 'markAsReviewed':
+                    reviewsLeft = reviewsLeft > 0
+                        ? reviewsLeft - 1
+                        : 0;
+                    nextReviewAt = reviewsLeft > 0
+                        ? this.reviewsService.getNextReviewDate(difficulty, reviewsLeft)
+                        : null;
+                    break;
+                case 'cancelReviews':
+                    reviewsLeft = 0;
+                    nextReviewAt = null;
+                    break;
+                case 'resetReviewsCount':
+                    reviewsLeft = this.reviewsService.getNumberOfReviewsForDifficulty(difficulty);
+                    nextReviewAt = reviewsLeft > 0 ? this.reviewsService.getNextReviewDate(difficulty, reviewsLeft) : null;
+                    break;
+                default:
+                    return { errors: 'Invalid action', note: null, tags: null };
+            }
+            note = { ...note, reviewsLeft, nextReviewAt };
+            const updatedNote = await this.notesRepository.save(note);
+            return { errors: null, note: updatedNote, tags: null };
         } catch (error) {
             return { errors: error.message, note: null, tags: null };
         }

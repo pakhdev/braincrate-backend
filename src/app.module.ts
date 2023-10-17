@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { NotesModule } from './notes/notes.module';
 import { TagsModule } from './tags/tags.module';
 import { ImagesModule } from './images/images.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
     imports: [
@@ -30,6 +31,7 @@ import { ImagesModule } from './images/images.module';
         NotesModule,
         TagsModule,
         ImagesModule,
+        ReviewsModule,
     ],
     controllers: [AppController],
     providers: [AppService],
