@@ -71,6 +71,11 @@ export class AuthService {
         };
     }
 
+    async isEmailRegistered(email: string): Promise<boolean> {
+        const user = await this.userRepository.findOneBy({ email });
+        return !!user;
+    }
+
     async update(id: number, user: User, updateUserDto: UpdateUserDto): Promise<Object> {
 
         if (user.id !== id)

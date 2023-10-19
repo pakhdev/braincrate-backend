@@ -6,6 +6,7 @@ import { json } from 'express';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     const port = process.env.PORT;
+    app.enableCors();
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,

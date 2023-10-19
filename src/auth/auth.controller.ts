@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, HttpCode, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, HttpCode, ParseIntPipe, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 import { GetUser } from './decorators/get-user.decorator';
-import { LoginUserDto, RegisterUserDto, UpdateUserDto } from './dto';
+import { CheckEmailDto, LoginUserDto, RegisterUserDto, UpdateUserDto } from './dto';
 import { User } from './entities/user.entity';
 import { AuthService } from './auth.service';
 
@@ -18,6 +18,12 @@ export class AuthController {
     @Post('login')
     loginUser(@Body() loginUserDto: LoginUserDto) {
         return this.authService.login(loginUserDto);
+    }
+
+    @Get('check-email')
+    async checkEmail(@Query() checkEmailDto: CheckEmailDto) {
+        const isRegistered = await this.authService.isEmailRegistered(checkEmailDto.email);
+        return { isRegistered };
     }
 
     @Patch('update/:id')
