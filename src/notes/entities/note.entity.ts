@@ -34,6 +34,9 @@ export class Note {
     @Column({ nullable: true })
     nextReviewAt: Date;
 
+    @Column({ nullable: true })
+    reviewedAt: Date;
+
     @JoinTable()
     @ManyToMany(() => Tag, tag => tag.notes)
     tags: Tag[];
@@ -44,6 +47,9 @@ export class Note {
     @ManyToOne(() => User, user => user.notes)
     @JoinColumn({ name: 'user_id' })
     user: User;
+
+    @Column({ default: () => 'NOW()' })
+    createdAt: Date;
 
     @Column({ nullable: true, default: null })
     removedAt: Date;

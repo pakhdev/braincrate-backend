@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { FindOptionsWhere, In, LessThanOrEqual, Like, MoreThanOrEqual, Repository } from 'typeorm';
+import { FindOptionsWhere, In, IsNull, LessThanOrEqual, Like, MoreThanOrEqual, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { CreateNoteDto, GetNotesDto, GetNotesForReviewDto, NoteOperationResponseDto, UpdateNoteDto } from './dto';
@@ -67,12 +67,15 @@ export class NotesService {
         const { limit = 20, offset = 0, title, tagIds } = getNotesDto;
         const where: FindOptionsWhere<Note> = {
             user: { id: user.id },
+            removedAt: IsNull(),
             tags: tagIds ? In(tagIds) : undefined,
             title: title ? Like(`%${ title }%`) : undefined,
         };
         Object.keys(where).forEach(key => where[key] === undefined && delete where[key]);
         return await this.notesRepository.find({
+            select: ['id', 'title', 'content', 'difficulty', 'createdAt', 'reviewedAt', 'reviewsLeft', 'nextReviewAt'],
             where, skip: offset, take: limit,
+            relations: ['tags'],
         });
     }
 
@@ -80,13 +83,16 @@ export class NotesService {
         const { limit = 20, offset = 0, tagIds } = getNotesForReviewDto;
         const where: FindOptionsWhere<Note> = {
             user: { id: user.id },
+            removedAt: IsNull(),
             tags: tagIds ? In(tagIds) : undefined,
             nextReviewAt: LessThanOrEqual(new Date()),
             reviewsLeft: MoreThanOrEqual(1),
         };
         Object.keys(where).forEach(key => where[key] === undefined && delete where[key]);
         return await this.notesRepository.find({
+            select: ['id', 'title', 'content', 'difficulty', 'createdAt', 'reviewedAt', 'reviewsLeft', 'nextReviewAt'],
             where, skip: offset, take: limit,
+            relations: ['tags'],
         });
     }
 
