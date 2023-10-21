@@ -68,15 +68,9 @@ export class NotesService {
         const where: FindOptionsWhere<Note> = {
             user: { id: user.id },
             removedAt: IsNull(),
-            tags: tagIds ? In(tagIds) : undefined,
             title: title ? Like(`%${ title }%`) : undefined,
         };
-        Object.keys(where).forEach(key => where[key] === undefined && delete where[key]);
-        return await this.notesRepository.find({
-            select: ['id', 'title', 'content', 'difficulty', 'createdAt', 'reviewedAt', 'reviewsLeft', 'nextReviewAt'],
-            where, skip: offset, take: limit,
-            relations: ['tags'],
-        });
+        return await this.getNotesQuery(tagIds, where, offset, limit);
     }
 
     async findAllForReview(user: User, getNotesForReviewDto: GetNotesForReviewDto): Promise<Note[]> {
@@ -84,16 +78,10 @@ export class NotesService {
         const where: FindOptionsWhere<Note> = {
             user: { id: user.id },
             removedAt: IsNull(),
-            tags: tagIds ? In(tagIds) : undefined,
             nextReviewAt: LessThanOrEqual(new Date()),
             reviewsLeft: MoreThanOrEqual(1),
         };
-        Object.keys(where).forEach(key => where[key] === undefined && delete where[key]);
-        return await this.notesRepository.find({
-            select: ['id', 'title', 'content', 'difficulty', 'createdAt', 'reviewedAt', 'reviewsLeft', 'nextReviewAt'],
-            where, skip: offset, take: limit,
-            relations: ['tags'],
-        });
+        return await this.getNotesQuery(tagIds, where, offset, limit);
     }
 
     async update(id: number, updateNoteDto: UpdateNoteDto, user: User): Promise<NoteOperationResponseDto> {
@@ -197,4 +185,31 @@ export class NotesService {
         }
     }
 
+    private async getNoteIdsByTags(tagIds: number[]): Promise<number[]> {
+        const queryBuilder = this.notesRepository
+            .createQueryBuilder('note')
+            .select('note.id')
+            .innerJoin('note_tags_tag', 'nt', 'note.id = nt.noteId')
+            .where('nt.tagId IN (:...tagIds)', { tagIds })
+            .groupBy('note.id')
+            .having('COUNT(1) = :tagCount', { tagCount: tagIds.length });
+
+        const results: { note_id: number }[] = await queryBuilder.getRawMany();
+
+        return results.map(result => result.note_id);
+    }
+
+    private async getNotesQuery(tagIds: number[], where: FindOptionsWhere<Note>, offset: number, limit: number): Promise<Note[]> {
+        if (tagIds) {
+            const noteIds = await this.getNoteIdsByTags(tagIds);
+            if (!noteIds.length) return [];
+            where.id = In(noteIds);
+        }
+        Object.keys(where).forEach(key => where[key] === undefined && delete where[key]);
+        return await this.notesRepository.find({
+            select: ['id', 'title', 'content', 'difficulty', 'createdAt', 'reviewedAt', 'reviewsLeft', 'nextReviewAt'],
+            where, skip: offset, take: limit,
+            relations: ['tags'],
+        });
+    }
 }

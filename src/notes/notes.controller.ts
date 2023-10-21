@@ -4,21 +4,20 @@ import { CreateNoteDto, GetNotesDto, GetNotesForReviewDto, UpdateNoteDto } from 
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { User } from '../auth/entities/user.entity';
-
-// TODO: Reviewed At
+import { Note } from './entities/note.entity';
 
 @Controller('notes')
 @UseGuards(AuthGuard())
 export class NotesController {
     constructor(private readonly notesService: NotesService) {}
 
-    @Get(':id')
+    @Get('id/:id')
     findOne(@Param('id', ParseIntPipe) id: string, @GetUser() user: User) {
         return this.notesService.findOneById(+id, user);
     }
 
     @Get()
-    findAll(@Query() getNotesDto: GetNotesDto, @GetUser() user: User) {
+    findAll(@Query() getNotesDto: GetNotesDto, @GetUser() user: User): Promise<[Note[], number] | Note[]> {
         return this.notesService.findAll(getNotesDto, user);
     }
 
