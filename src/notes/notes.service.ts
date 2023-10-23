@@ -84,6 +84,16 @@ export class NotesService {
         return await this.getNotesQuery(tagIds, where, offset, limit);
     }
 
+    async countAllForReview(user: User): Promise<number> {
+        const where: FindOptionsWhere<Note> = {
+            user: { id: user.id },
+            removedAt: IsNull(),
+            nextReviewAt: LessThanOrEqual(new Date()),
+            reviewsLeft: MoreThanOrEqual(1),
+        };
+        return await this.notesRepository.count({ where });
+    }
+
     async update(id: number, updateNoteDto: UpdateNoteDto, user: User): Promise<NoteOperationResponseDto> {
         try {
             let note = await this.findOneById(id, user);

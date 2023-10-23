@@ -26,6 +26,11 @@ export class NotesController {
         return this.notesService.findAllForReview(user, getNotesForReview);
     }
 
+    @Get('count-for-review')
+    countAllForReview(@GetUser() user: User) {
+        return this.notesService.countAllForReview(user);
+    }
+
     @Post()
     create(@Body() createNoteDto: CreateNoteDto, @GetUser() user: User) {
         return this.notesService.create(createNoteDto, user);
