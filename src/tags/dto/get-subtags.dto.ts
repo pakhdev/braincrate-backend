@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsNumberString, IsOptional, IsString } from 'class-validator';
 
 export class GetSubtagsDto {
     @IsArray()
@@ -8,5 +8,5 @@ export class GetSubtagsDto {
 
     @IsString()
     @IsOptional()
-    title?: string;
+    searchTerm?: string;
 }

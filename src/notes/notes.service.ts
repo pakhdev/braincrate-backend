@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { FindOptionsWhere, In, IsNull, LessThanOrEqual, Like, MoreThanOrEqual, Repository } from 'typeorm';
+import { FindOptionsWhere, In, IsNull, LessThanOrEqual, MoreThanOrEqual, Raw, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { CreateNoteDto, GetNotesDto, GetNotesForReviewDto, NoteOperationResponseDto, UpdateNoteDto } from './dto';
@@ -64,11 +64,13 @@ export class NotesService {
     }
 
     async findAll(getNotesDto: GetNotesDto, user: User): Promise<Note[]> {
-        const { limit = 20, offset = 0, title, tagIds } = getNotesDto;
+        const { limit = 20, offset = 0, searchTerm, tagIds } = getNotesDto;
         const where: FindOptionsWhere<Note> = {
             user: { id: user.id },
             removedAt: IsNull(),
-            title: title ? Like(`%${ title }%`) : undefined,
+            title: searchTerm
+                ? Raw((_) => `(title LIKE :searchTerm OR content LIKE :searchTerm)`, { searchTerm: `%${ searchTerm }%` })
+                : undefined,
         };
         return await this.getNotesQuery(tagIds, where, offset, limit);
     }
@@ -113,6 +115,7 @@ export class NotesService {
                 content: noteHtml,
                 tags: resultTags,
                 images: noteImages,
+                updatedAt: new Date(),
             };
 
             const updatedNote = await this.notesRepository.save(note);
@@ -219,6 +222,7 @@ export class NotesService {
         return await this.notesRepository.find({
             select: ['id', 'title', 'content', 'difficulty', 'createdAt', 'reviewedAt', 'reviewsLeft', 'nextReviewAt'],
             where, skip: offset, take: limit,
+            order: { id: 'DESC' },
             relations: ['tags'],
         });
     }

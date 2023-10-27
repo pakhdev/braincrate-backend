@@ -49,6 +49,9 @@ export class Note {
     user: User;
 
     @Column({ default: () => 'NOW()' })
+    updatedAt: Date;
+
+    @Column({ default: () => 'NOW()' })
     createdAt: Date;
 
     @Column({ nullable: true, default: null })

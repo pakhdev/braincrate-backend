@@ -9,5 +9,5 @@ export class GetNotesDto extends PaginationDto {
 
     @IsString()
     @IsOptional()
-    title?: string;
+    searchTerm?: string;
 }
