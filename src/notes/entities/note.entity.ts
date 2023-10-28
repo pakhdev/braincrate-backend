@@ -37,6 +37,9 @@ export class Note {
     @Column({ nullable: true })
     reviewedAt: Date;
 
+    @Column({ default: false })
+    removeAfterReviews: boolean;
+
     @JoinTable()
     @ManyToMany(() => Tag, tag => tag.notes)
     tags: Tag[];

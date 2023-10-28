@@ -21,7 +21,7 @@ export class NotesService {
 
     async create(createNoteDto: CreateNoteDto, user: User): Promise<NoteOperationResponseDto> {
 
-        const { title, content, difficulty, tags } = createNoteDto;
+        const { title, content, difficulty, tags, removeAfterReviews } = createNoteDto;
 
         const reviewsLeft = this.reviewsService.getNumberOfReviewsForDifficulty(+difficulty);
         const nextReviewAt = reviewsLeft > 0
@@ -45,6 +45,7 @@ export class NotesService {
                 tags: resultTags,
                 images: noteImages,
                 difficulty: +difficulty,
+                removeAfterReviews,
                 user,
             });
             const createdNote = await this.notesRepository.save(newNote);
@@ -116,6 +117,7 @@ export class NotesService {
                 tags: resultTags,
                 images: noteImages,
                 updatedAt: new Date(),
+                removeAfterReviews: updateNoteDto.removeAfterReviews,
             };
 
             const updatedNote = await this.notesRepository.save(note);
@@ -153,7 +155,7 @@ export class NotesService {
                 default:
                     return { errors: 'Invalid action', note: null, tags: null };
             }
-            note = { ...note, reviewsLeft, nextReviewAt };
+            note = { ...note, reviewsLeft, nextReviewAt, reviewedAt: new Date() };
             const updatedNote = await this.notesRepository.save(note);
             return { errors: null, note: updatedNote, tags: null };
         } catch (error) {
@@ -220,7 +222,7 @@ export class NotesService {
         }
         Object.keys(where).forEach(key => where[key] === undefined && delete where[key]);
         return await this.notesRepository.find({
-            select: ['id', 'title', 'content', 'difficulty', 'createdAt', 'reviewedAt', 'reviewsLeft', 'nextReviewAt'],
+            select: ['id', 'title', 'content', 'difficulty', 'createdAt', 'updatedAt', 'reviewedAt', 'reviewsLeft', 'nextReviewAt', 'removeAfterReviews', 'removedAt'],
             where, skip: offset, take: limit,
             order: { id: 'DESC' },
             relations: ['tags'],
