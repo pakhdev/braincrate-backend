@@ -150,14 +150,16 @@ export class NotesService {
                     break;
                 case 'resetReviewsCount':
                     reviewsLeft = this.reviewsService.getNumberOfReviewsForDifficulty(difficulty);
-                    nextReviewAt = reviewsLeft > 0 ? this.reviewsService.getNextReviewDate(difficulty, reviewsLeft) : null;
+                    nextReviewAt = note.nextReviewAt;
                     break;
                 default:
                     return { errors: 'Invalid action', note: null, tags: null };
             }
             note = { ...note, reviewsLeft, nextReviewAt, reviewedAt: new Date() };
             const updatedNote = await this.notesRepository.save(note);
-            return { errors: null, note: updatedNote, tags: null };
+            const tags = await this.tagsService.findTagsWithoutNotesForReview(user, note.tags.map(tag => tag.id));
+
+            return { errors: null, note: updatedNote, tags };
         } catch (error) {
             return { errors: error.message, note: null, tags: null };
         }
@@ -167,14 +169,14 @@ export class NotesService {
         try {
 
             let note = await this.findOneById(id, user);
-            if (note.removedAt) return { errors: null, note: null, tags: null };
+            if (note.removedAt) return { errors: 'Nota no encontrada', note: null, tags: null };
 
             const { touchedTags } = await this.tagsService.prepareTagsList(note.tags, [], user);
             const removedTags = note.tags.map((tag) => tag.name).join(',');
             note = { ...note, removedTags, removedAt: new Date() };
-            await this.notesRepository.save(note);
+            const savedNote = await this.notesRepository.save(note);
             await this.imagesService.markForRemovingByNoteId(id, user);
-            return { errors: null, note: null, tags: touchedTags };
+            return { errors: null, note: savedNote, tags: touchedTags };
         } catch (error) {
             return { errors: error.message, note: null, tags: null };
         }
@@ -184,7 +186,11 @@ export class NotesService {
         try {
 
             let note = await this.findOneById(id, user);
-            if (!note.removedAt) return { errors: null, note: null, tags: null };
+            if (!note.removedAt) return {
+                errors: 'Nota no encontrada o no se encuentra eliminada',
+                note: null,
+                tags: null,
+            };
 
             const removedTags = note.removedTags.split(',');
             const {

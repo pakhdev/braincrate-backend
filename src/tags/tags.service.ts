@@ -1,6 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { User } from '../auth/entities/user.entity';
 import { Tag } from './entities/tag.entity';
@@ -30,7 +30,8 @@ export class TagsService {
         if (tag.notesCount > 0) {
             return await this.tagsRepository.save(tag);
         }
-        return await this.tagsRepository.remove(tag);
+        await this.tagsRepository.remove(tag);
+        return { id: tag.id, name: tag.name, notesCount: 0 } as Tag;
     }
 
     async findAll(getSubtagsDto: GetSubtagsDto, user: User): Promise<TagsResponseDto[]> {
@@ -56,27 +57,66 @@ export class TagsService {
         });
     }
 
-    async prepareTagsList(oldTags: Tag[], newTagNames: string[], user: User) {
+    async findByIds(tagIds: number[], user: User): Promise<Tag[]> {
+        return await this.tagsRepository.find({
+            select: ['id', 'name', 'notesCount'],
+            where: {
+                id: In(tagIds),
+                user: { id: user.id },
+            },
+        });
+    }
+
+    async findTagsWithoutNotesForReview(user: User, tagIds: number[]): Promise<Tag[]> {
+        const query = this.tagsRepository
+            .createQueryBuilder('tag')
+            .select('tag.id')
+            .innerJoin('note_tags_tag', 'nt', 'tag.id = nt.tagId')
+            .innerJoin('note', 'note', 'nt.noteId = note.id')
+            .where('tag.id IN (:...tagIds)', { tagIds })
+            .andWhere('note.removedAt IS NULL')
+            .andWhere('note.nextReviewAt <= :currentDate', { currentDate: new Date() })
+            .andWhere('note.reviewsLeft >= :minReviewsLeft', { minReviewsLeft: 1 })
+            .andWhere('note.user_id = :userId', { userId: user.id })
+            .groupBy('tag.id');
+
+        const tagsWithNotes = await query.getRawMany();
+        const tagIdsWithNotes = tagsWithNotes.map(tag => tag.tag_id);
+        const tagIdsWithoutNote = tagIds.filter(tagId => !tagIdsWithNotes.includes(tagId));
+        const tagsWithoutNotes = await this.findByIds(tagIdsWithoutNote, user);
+        return tagsWithoutNotes.map(tag => {
+            tag.notesCount = 0;
+            return tag;
+        });
+    }
+
+    async prepareTagsList(oldTags: Tag[], newTagNames: string[], user: User): Promise<{
+        resultTags: Tag[],
+        touchedTags: Tag[]
+    }> {
 
         const resultTags: Tag[] = [];
-        const touchedTags: { name: string, notesCount: number }[] = [];
+        const touchedTags: Tag[] = [];
 
-        for (const newTagName of newTagNames) {
+        for (let newTagName of newTagNames) {
+            newTagName = newTagName.toLowerCase().trim();
+
             const existingTag = oldTags.find(tag => tag.name === newTagName);
             if (existingTag) {
                 resultTags.push(existingTag);
             } else {
                 const newTag = await this.incrementCountOrCreate(newTagName, user);
                 resultTags.push(newTag);
-                touchedTags.push({ name: newTag.name, notesCount: newTag.notesCount });
+                touchedTags.push({ id: newTag.id, name: newTag.name, notesCount: newTag.notesCount } as Tag);
             }
         }
 
         const tagsToRemove: Tag[] = oldTags.filter(tag => !newTagNames.includes(tag.name));
         for (const tag of tagsToRemove) {
+            const decrementingId = tag.id;
             const decrementedTag = await this.decrementCountOrRemove(tag);
             touchedTags.push(
-                { name: decrementedTag.name, notesCount: decrementedTag.notesCount },
+                { id: decrementingId, name: decrementedTag.name, notesCount: decrementedTag.notesCount } as Tag,
             );
         }
 

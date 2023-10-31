@@ -25,7 +25,6 @@ export class ReviewsService {
 
         if (schedule && reviewsLeft >= 0 && reviewsLeft <= schedule.length) {
             const daysToAdd = schedule[schedule.length - reviewsLeft];
-            console.log('daysToAdd', daysToAdd);
             return new Date(Date.now() + (daysToAdd * oneDay));
         } else {
             return new Date();

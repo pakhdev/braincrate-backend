@@ -51,7 +51,7 @@ export class NotesController {
         return this.notesService.updateNoteReviewStatus(+id, user, 'cancelReviews');
     }
 
-    @Patch('reset-reviews-count/:id')
+    @Patch('reset-reviews/:id')
     resetReviewsCount(@Param('id', ParseIntPipe) id: string, @GetUser() user: User) {
         return this.notesService.updateNoteReviewStatus(+id, user, 'resetReviewsCount');
     }
