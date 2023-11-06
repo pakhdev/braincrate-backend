@@ -155,6 +155,7 @@ export class TagsService {
         if (notesType === 'for-review') {
             whereOptions.push('note.nextReviewAt <= :currentDate');
             whereOptions.push('note.reviewsLeft >= :minReviewsLeft');
+            whereOptions.push('note.removedAt IS NULL');
             parameters['currentDate'] = new Date();
             parameters['minReviewsLeft'] = 1;
         }
