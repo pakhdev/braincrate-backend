@@ -8,6 +8,7 @@ import { ReviewsService } from '../reviews/reviews.service';
 import { TagsService } from '../tags/tags.service';
 import { Note } from './entities/note.entity';
 import { User } from '../auth/entities/user.entity';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class NotesService {
@@ -233,5 +234,28 @@ export class NotesService {
             order: { id: 'DESC' },
             relations: ['tags'],
         });
+    }
+
+    @Cron('0 1 * * * *')
+    private async purgeDeletedNotes(): Promise<void> {
+        const imageIds: number[] = [];
+        const noteIds: number[] = [];
+        const hour = 60 * 60 * 1000;
+        const notes = await this.notesRepository.find({
+            where: { removedAt: LessThanOrEqual(new Date(Date.now() - 6 * hour)) },
+            relations: ['images'],
+        });
+
+        notes.forEach(note => {
+            noteIds.push(note.id);
+            if (!note.images.length) return;
+
+            imageIds.push(...note.images.map(image => image.id));
+        });
+
+        if (imageIds.length)
+            await this.imagesService.purgeImageFilesAndRecords(imageIds);
+        if (noteIds.length)
+            await this.notesRepository.delete(noteIds);
     }
 }

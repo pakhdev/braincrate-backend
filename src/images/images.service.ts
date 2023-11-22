@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { promises as fsPromises } from 'fs';
 import * as sharp from 'sharp';
 import * as path from 'path';
@@ -165,6 +165,21 @@ export class ImagesService {
         for (const id of previouslyUploadedIds) {
             const isOrphaned = !currentImages.find((image) => image.id === id);
             if (isOrphaned) await this.removeImageFile(+id);
+        }
+    }
+
+    async purgeImageFilesAndRecords(ids: number[]): Promise<void> {
+        try {
+            const images = await this.imagesRepository.findBy({ id: In(ids) });
+            images.forEach(image => {
+                fsPromises.unlink(`${ this.imgDir }/${ image.fileName }`);
+                if (image.largeImage) {
+                    fsPromises.unlink(`${ this.imgDir }/${ image.largeImage }`);
+                }
+            });
+            await this.imagesRepository.remove(images);
+        } catch (error) {
+            throw new BadRequestException('Error al eliminar la imagen');
         }
     }
 

@@ -10,6 +10,7 @@ import { NotesModule } from './notes/notes.module';
 import { TagsModule } from './tags/tags.module';
 import { ImagesModule } from './images/images.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
     imports: [
@@ -27,6 +28,7 @@ import { ReviewsModule } from './reviews/reviews.module';
             autoLoadEntities: true,
             synchronize: true,
         }),
+        ScheduleModule.forRoot(),
         AuthModule,
         NotesModule,
         TagsModule,
