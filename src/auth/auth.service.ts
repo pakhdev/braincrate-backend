@@ -10,7 +10,15 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
-import { LoginUserDto, RegisterUserDto, UpdatePasswordDto, UpdateUserDto, UpdateEmailDto } from './dto';
+import {
+    LoginUserDto,
+    RegisterUserDto,
+    UpdatePasswordDto,
+    UpdateUserDto,
+    UpdateEmailDto,
+    AuthErrorResponseDto,
+    AuthSuccessResponseDto,
+} from './dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { User } from './entities/user.entity';
 import { handleDBErrors } from '../common/helpers/handle-db-errors.helper';
@@ -24,27 +32,24 @@ export class AuthService {
     ) {
     }
 
-    async register(registerUserDto: RegisterUserDto): Promise<Object> {
+    async register(registerUserDto: RegisterUserDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
         const user = await this.userRepository.findOneBy({ email: registerUserDto.email });
-        if (user) throw new BadRequestException({
-            ok: false,
-            message: 'Usuario con éste correo electrónico ya existe',
-        });
+        if (user) throw new BadRequestException({ errorCode: 'emailTaken' });
         return await this.create(registerUserDto);
     }
 
-    async create(createUserDto: RegisterUserDto): Promise<Object> {
+    async create(createUserDto: RegisterUserDto): Promise<AuthSuccessResponseDto> {
         const { password, ...userData } = createUserDto;
         const user = this.userRepository.create({
             ...userData,
             password: bcrypt.hashSync(password, 10),
         });
-
         try {
             const savedUser = await this.userRepository.save(user);
             delete savedUser.password;
             return {
-                ...savedUser,
+                email: savedUser.email,
+                id: savedUser.id,
                 token: this.getJwtToken({ id: savedUser.id }),
             };
         } catch (error) {
@@ -52,52 +57,46 @@ export class AuthService {
         }
     }
 
-    async login(loginUserDto: LoginUserDto) {
+    async login(loginUserDto: LoginUserDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
         const { password, email } = loginUserDto;
         const user = await this.userRepository.findOne({
             where: { email: email.toLowerCase().trim() },
             select: { id: true, email: true, password: true },
         });
         if (!user) {
-            throw new UnauthorizedException('Correo electrónico incorrecto');
+            throw new UnauthorizedException({ errorCode: 'userNotFound' });
         }
         if (!bcrypt.compareSync(password, user.password))
-            throw new UnauthorizedException('Contraseña incorrecta');
+            throw new UnauthorizedException({ errorCode: 'wrongPassword' });
 
-        delete user.password;
         return {
-            ...user,
+            id: user.id,
+            email: user.email,
             token: this.getJwtToken({ id: user.id }),
         };
     }
 
-    async isEmailRegistered(email: string): Promise<boolean> {
+    async isEmailRegistered(email: string): Promise<{ isRegistered: boolean }> {
         const findEmail = await this.userRepository.findOneBy({ email });
-        return !!findEmail;
+        return { isRegistered: !!findEmail };
     }
 
-    async update(id: number, user: User, updateUserDto: UpdateUserDto): Promise<Object> {
-
+    async update(id: number, user: User, updateUserDto: UpdateUserDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
         if (user.id !== id)
-            throw new ForbiddenException();
-
+            throw new ForbiddenException({ errorCode: 'forbidden' });
+        const { password, ...userData } = updateUserDto;
+        const userToUpdate = await this.userRepository.preload({
+            id,
+            ...userData,
+            password: password ? bcrypt.hashSync(password, 10) : undefined,
+        });
+        if (!userToUpdate)
+            throw new NotFoundException({ errorCode: 'userNotFound' });
         try {
-            const { password, ...userData } = updateUserDto;
-            const user = await this.userRepository.preload({
-                id,
-                ...userData,
-                password: password ? bcrypt.hashSync(password, 10) : undefined,
-            });
-
-            // TODO: Controlar éste error en catch
-            if (!user)
-                throw new NotFoundException('Usuario no encontrado');
-
-            const updatedUser = await this.userRepository.save(user);
-
-            delete updatedUser.password;
+            const updatedUser = await this.userRepository.save(userToUpdate);
             return {
-                ...user,
+                email: updatedUser.email,
+                id: updatedUser.id,
                 token: this.getJwtToken({ id: user.id }),
             };
         } catch (error) {
@@ -105,73 +104,66 @@ export class AuthService {
         }
     }
 
-    async updateEmail(user: User, updateEmailDto: UpdateEmailDto) {
+    async updateEmail(user: User, updateEmailDto: UpdateEmailDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
         const email = updateEmailDto.email.toLowerCase().trim();
         if (await this.isEmailRegistered(email))
-            return { user: null, error: 'Correo electrónico ya registrado' };
-
+            throw new BadRequestException({ errorCode: 'emailTaken' });
+        const userToUpdate = await this.userRepository.preload({
+            id: user.id,
+            email,
+        });
+        if (!userToUpdate)
+            throw new NotFoundException({ errorCode: 'userNotFound' });
         try {
-            const updatedUser = await this.userRepository.preload({
-                id: user.id,
-                email,
-            });
-
-            if (!updatedUser)
-                return { user: null, error: 'Usuario no encontrado' };
-
-            await this.userRepository.save(updatedUser);
+            const updatedUser = await this.userRepository.save(userToUpdate);
             return {
-                user: {
-                    ...updatedUser,
-                    token: this.getJwtToken({ id: updatedUser.id }),
-                },
-                error: null,
+                email: updatedUser.email,
+                id: updatedUser.id,
+                token: this.getJwtToken({ id: updatedUser.id }),
             };
         } catch (error) {
-            return { user: null, error };
+            handleDBErrors(error, 'AuthModule');
         }
     }
 
-    async updatePassword(user: User, updatePasswordDto: UpdatePasswordDto) {
+    async updatePassword(user: User, updatePasswordDto: UpdatePasswordDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
         const { email } = user;
         const { oldPassword, newPassword } = updatePasswordDto;
-
-        const userDB = await this.userRepository.findOne({
+        const userToUpdate = await this.userRepository.findOne({
             where: { email: email.toLowerCase().trim() },
             select: { id: true, email: true, password: true },
         });
-
-        if (!userDB)
-            return { user: null, error: 'Correo electrónico incorrecto' };
-        if (!bcrypt.compareSync(oldPassword, userDB.password))
-            return { user: null, error: 'Contraseña incorrecta' };
+        if (!userToUpdate)
+            throw new NotFoundException({ errorCode: 'userNotFound' });
+        if (!bcrypt.compareSync(oldPassword, userToUpdate.password))
+            throw new UnauthorizedException({ errorCode: 'wrongPassword' });
+        if (bcrypt.compareSync(newPassword, userToUpdate.password))
+            throw new BadRequestException({ errorCode: 'passwordMatchesOld' });
 
         try {
-            const updatedUser = await this.userRepository.preload({
+            const updateUser = await this.userRepository.preload({
                 id: user.id,
                 password: bcrypt.hashSync(newPassword, 10),
             });
-            await this.userRepository.save(updatedUser);
+            const updatedUser = await this.userRepository.save(updateUser);
             return {
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    token: this.getJwtToken({ id: updatedUser.id }),
-                },
-                error: null,
+                email: updatedUser.email,
+                id: updatedUser.id,
+                token: this.getJwtToken({ id: updatedUser.id }),
             };
         } catch (error) {
-            return { user: null, error };
+            handleDBErrors(error, 'AuthModule');
         }
     }
 
-    private getJwtToken(payload: JwtPayload) {
+    private getJwtToken(payload: JwtPayload): string {
         return this.jwtService.sign(payload);
     }
 
-    async checkAuthStatus(user: User) {
+    async checkAuthStatus(user: User): Promise<AuthSuccessResponseDto> {
         return {
-            ...user,
+            email: user.email,
+            id: user.id,
             token: this.getJwtToken({ id: user.id }),
         };
     }

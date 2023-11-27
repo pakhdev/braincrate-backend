@@ -21,9 +21,8 @@ export class AuthController {
     }
 
     @Get('check-email')
-    async checkEmail(@Query() checkEmailDto: CheckEmailDto) {
-        const isRegistered = await this.authService.isEmailRegistered(checkEmailDto.email);
-        return { isRegistered };
+    checkEmail(@Query() checkEmailDto: CheckEmailDto): Promise<{ isRegistered: boolean }> {
+        return this.authService.isEmailRegistered(checkEmailDto.email);
     }
 
     @Patch('update-email')
