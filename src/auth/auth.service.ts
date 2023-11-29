@@ -29,8 +29,7 @@ export class AuthService {
     constructor(
         @InjectRepository(User) private readonly userRepository: Repository<User>,
         private readonly jwtService: JwtService,
-    ) {
-    }
+    ) {}
 
     async register(registerUserDto: RegisterUserDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
         const user = await this.userRepository.findOneBy({ email: registerUserDto.email });
@@ -106,7 +105,9 @@ export class AuthService {
 
     async updateEmail(user: User, updateEmailDto: UpdateEmailDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
         const email = updateEmailDto.email.toLowerCase().trim();
-        if (await this.isEmailRegistered(email))
+        if (user.email === email)
+            throw new BadRequestException({ errorCode: 'emailMatchesOld' });
+        if ((await this.isEmailRegistered(email)).isRegistered)
             throw new BadRequestException({ errorCode: 'emailTaken' });
         const userToUpdate = await this.userRepository.preload({
             id: user.id,
@@ -136,7 +137,7 @@ export class AuthService {
         if (!userToUpdate)
             throw new NotFoundException({ errorCode: 'userNotFound' });
         if (!bcrypt.compareSync(oldPassword, userToUpdate.password))
-            throw new UnauthorizedException({ errorCode: 'wrongPassword' });
+            throw new UnauthorizedException({ errorCode: 'wrongOldPassword' });
         if (bcrypt.compareSync(newPassword, userToUpdate.password))
             throw new BadRequestException({ errorCode: 'passwordMatchesOld' });
 

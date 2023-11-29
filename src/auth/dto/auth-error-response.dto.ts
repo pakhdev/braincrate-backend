@@ -1,3 +1,3 @@
 export class AuthErrorResponseDto {
-    errorCode: 'emailTaken' | 'emailMatchesOld' | 'userNotFound' | 'forbidden' | 'wrongPassword' | 'passwordMatchesOld';
+    errorCode: 'emailTaken' | 'emailMatchesOld' | 'wrongOldPassword' | 'userNotFound' | 'forbidden' | 'wrongPassword' | 'passwordMatchesOld';
 }
