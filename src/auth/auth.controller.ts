@@ -5,6 +5,7 @@ import { GetUser } from './decorators/get-user.decorator';
 import { CheckEmailDto, LoginUserDto, RegisterUserDto, UpdateEmailDto, UpdatePasswordDto, UpdateUserDto } from './dto';
 import { User } from './entities/user.entity';
 import { AuthService } from './auth.service';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -18,6 +19,21 @@ export class AuthController {
     @Post('login')
     loginUser(@Body() loginUserDto: LoginUserDto) {
         return this.authService.login(loginUserDto);
+    }
+
+    @Get('google-login')
+    // @UseGuards(GoogleAuthGuard)
+    googleAuth() {
+        return { message: 'This route is protected by Google OAuth guard' };
+    }
+
+    @Get('google-redirect')
+    @UseGuards(GoogleAuthGuard)
+    googleRedirect() {
+        return {
+            clientID: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        };
     }
 
     @Get('check-email')

@@ -75,6 +75,17 @@ export class AuthService {
         };
     }
 
+    async validateGoogleUser(email: string): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
+        const user = await this.userRepository.findOneBy({ email });
+        if (!user) throw new UnauthorizedException({ errorCode: 'userNotFound' });
+
+        return {
+            id: user.id,
+            email: user.email,
+            token: this.getJwtToken({ id: user.id }),
+        };
+    }
+
     async isEmailRegistered(email: string): Promise<{ isRegistered: boolean }> {
         const findEmail = await this.userRepository.findOneBy({ email });
         return { isRegistered: !!findEmail };

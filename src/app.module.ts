@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
-import { envConfiguration } from '../config/env.config';
+import { envConfig } from '../config/env.config';
 import { JoiValidationSchema } from '../config/joi.validation';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
@@ -15,18 +15,18 @@ import { ScheduleModule } from '@nestjs/schedule';
 @Module({
     imports: [
         ConfigModule.forRoot({
-            load: [envConfiguration],
+            load: [envConfig],
             validationSchema: JoiValidationSchema,
         }),
         TypeOrmModule.forRoot({
             type: 'mysql',
-            host: process.env.MYSQL_HOST,
-            port: +process.env.MYSQL_PORT,
-            username: process.env.MYSQL_USER,
-            password: process.env.MYSQL_PASSWORD,
-            database: process.env.MYSQL_DB_NAME,
+            host: envConfig().mysqlHost,
+            port: envConfig().mysqlPort,
+            username: envConfig().mysqlUser,
+            password: envConfig().mysqlPassword,
+            database: envConfig().mysqlDbName,
             autoLoadEntities: true,
-            synchronize: true,
+            synchronize: envConfig().mysqlSync,
         }),
         ScheduleModule.forRoot(),
         AuthModule,
