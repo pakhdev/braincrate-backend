@@ -7,7 +7,12 @@ import * as process from 'process';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     const port = process.env.API_PORT;
-    app.enableCors();
+    if (process.env.ENABLE_CORS.toLowerCase() === 'true')
+        app.enableCors({
+            origin: process.env.CORS_ORIGIN,
+            credentials: true,
+        });
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,

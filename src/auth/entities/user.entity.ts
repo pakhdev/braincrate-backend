@@ -15,6 +15,9 @@ export class User {
     @Column('varchar', { select: false })
     password: string;
 
+    @Column('boolean', { default: false })
+    hasGoogleAccount: boolean;
+
     @OneToMany(() => Note, note => note.user)
     notes: Note[];
 

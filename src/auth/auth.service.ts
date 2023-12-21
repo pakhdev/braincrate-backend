@@ -6,6 +6,7 @@ import {
     NotFoundException,
     UnauthorizedException,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -17,11 +18,11 @@ import {
     UpdateUserDto,
     UpdateEmailDto,
     AuthErrorResponseDto,
-    AuthSuccessResponseDto,
 } from './dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { User } from './entities/user.entity';
 import { handleDBErrors } from '../common/helpers/handle-db-errors.helper';
+import { envConfig } from '../../config/env.config';
 
 @Injectable()
 export class AuthService {
@@ -31,13 +32,13 @@ export class AuthService {
         private readonly jwtService: JwtService,
     ) {}
 
-    async register(registerUserDto: RegisterUserDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
+    public async register(registerUserDto: RegisterUserDto, res: Response): Promise<void | AuthErrorResponseDto> {
         const user = await this.userRepository.findOneBy({ email: registerUserDto.email });
         if (user) throw new BadRequestException({ errorCode: 'emailTaken' });
-        return await this.create(registerUserDto);
+        return await this.create(registerUserDto, res);
     }
 
-    async create(createUserDto: RegisterUserDto): Promise<AuthSuccessResponseDto> {
+    public async create(createUserDto: RegisterUserDto, res: Response): Promise<void> {
         const { password, ...userData } = createUserDto;
         const user = this.userRepository.create({
             ...userData,
@@ -45,53 +46,52 @@ export class AuthService {
         });
         try {
             const savedUser = await this.userRepository.save(user);
-            delete savedUser.password;
-            return {
-                email: savedUser.email,
-                id: savedUser.id,
-                token: this.getJwtToken({ id: savedUser.id }),
-            };
+            this.setAuthCookies(res, savedUser);
         } catch (error) {
             handleDBErrors(error, 'AuthModule');
         }
     }
 
-    async login(loginUserDto: LoginUserDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
+    public async login(loginUserDto: LoginUserDto, res: Response): Promise<void | AuthErrorResponseDto> {
         const { password, email } = loginUserDto;
         const user = await this.userRepository.findOne({
             where: { email: email.toLowerCase().trim() },
-            select: { id: true, email: true, password: true },
+            select: { id: true, email: true, password: true, hasGoogleAccount: true },
         });
         if (!user) {
             throw new UnauthorizedException({ errorCode: 'userNotFound' });
         }
         if (!bcrypt.compareSync(password, user.password))
             throw new UnauthorizedException({ errorCode: 'wrongPassword' });
-
-        return {
-            id: user.id,
-            email: user.email,
-            token: this.getJwtToken({ id: user.id }),
-        };
+        this.setAuthCookies(res, user);
     }
 
-    async validateGoogleUser(email: string): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
+    public logout(res: Response): Response<string> {
+        res.clearCookie('token', { httpOnly: true, secure: envConfig().cookieSecureFlag });
+        res.clearCookie('id', { secure: envConfig().cookieSecureFlag });
+        res.clearCookie('email', { secure: envConfig().cookieSecureFlag });
+        res.clearCookie('hasPass', { secure: envConfig().cookieSecureFlag });
+        res.clearCookie('hasGoogleAccount', { secure: envConfig().cookieSecureFlag });
+        return res.send('Logout successful');
+    }
+
+    public async validateGoogleUser(email: string) {
         const user = await this.userRepository.findOneBy({ email });
         if (!user) throw new UnauthorizedException({ errorCode: 'userNotFound' });
-
         return {
             id: user.id,
             email: user.email,
-            token: this.getJwtToken({ id: user.id }),
+            hasPass: !!user.password,
+            hasGoogleAccount: user.hasGoogleAccount,
         };
     }
 
-    async isEmailRegistered(email: string): Promise<{ isRegistered: boolean }> {
+    public async isEmailRegistered(email: string): Promise<{ isRegistered: boolean }> {
         const findEmail = await this.userRepository.findOneBy({ email });
         return { isRegistered: !!findEmail };
     }
 
-    async update(id: number, user: User, updateUserDto: UpdateUserDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
+    public async update(id: number, user: User, updateUserDto: UpdateUserDto, res: Response): Promise<void | AuthErrorResponseDto> {
         if (user.id !== id)
             throw new ForbiddenException({ errorCode: 'forbidden' });
         const { password, ...userData } = updateUserDto;
@@ -104,17 +104,13 @@ export class AuthService {
             throw new NotFoundException({ errorCode: 'userNotFound' });
         try {
             const updatedUser = await this.userRepository.save(userToUpdate);
-            return {
-                email: updatedUser.email,
-                id: updatedUser.id,
-                token: this.getJwtToken({ id: user.id }),
-            };
+            this.setAuthCookies(res, updatedUser);
         } catch (error) {
             handleDBErrors(error, 'AuthModule');
         }
     }
 
-    async updateEmail(user: User, updateEmailDto: UpdateEmailDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
+    public async updateEmail(user: User, updateEmailDto: UpdateEmailDto, res: Response): Promise<void | AuthErrorResponseDto> {
         const email = updateEmailDto.email.toLowerCase().trim();
         if (user.email === email)
             throw new BadRequestException({ errorCode: 'emailMatchesOld' });
@@ -128,17 +124,13 @@ export class AuthService {
             throw new NotFoundException({ errorCode: 'userNotFound' });
         try {
             const updatedUser = await this.userRepository.save(userToUpdate);
-            return {
-                email: updatedUser.email,
-                id: updatedUser.id,
-                token: this.getJwtToken({ id: updatedUser.id }),
-            };
+            this.setAuthCookies(res, updatedUser);
         } catch (error) {
             handleDBErrors(error, 'AuthModule');
         }
     }
 
-    async updatePassword(user: User, updatePasswordDto: UpdatePasswordDto): Promise<AuthErrorResponseDto | AuthSuccessResponseDto> {
+    public async updatePassword(user: User, updatePasswordDto: UpdatePasswordDto, res: Response): Promise<void | AuthErrorResponseDto> {
         const { email } = user;
         const { oldPassword, newPassword } = updatePasswordDto;
         const userToUpdate = await this.userRepository.findOne({
@@ -158,26 +150,36 @@ export class AuthService {
                 password: bcrypt.hashSync(newPassword, 10),
             });
             const updatedUser = await this.userRepository.save(updateUser);
-            return {
-                email: updatedUser.email,
-                id: updatedUser.id,
-                token: this.getJwtToken({ id: updatedUser.id }),
-            };
+            this.setAuthCookies(res, updatedUser);
         } catch (error) {
             handleDBErrors(error, 'AuthModule');
         }
+    }
+
+    public async checkAuthStatus(user: User, res: Response): Promise<void> {
+        this.setAuthCookies(res, user);
     }
 
     private getJwtToken(payload: JwtPayload): string {
         return this.jwtService.sign(payload);
     }
 
-    async checkAuthStatus(user: User): Promise<AuthSuccessResponseDto> {
-        return {
-            email: user.email,
+    private setAuthCookies(res: Response, user: User): void {
+        const token = this.getJwtToken({ id: user.id });
+        const expirationDate = new Date();
+        expirationDate.setSeconds(expirationDate.getSeconds() + envConfig().jwtExpiresInSeconds);
+
+        res.cookie('id', user.id.toString(), { expires: expirationDate });
+        res.cookie('email', user.email, { expires: expirationDate });
+        res.cookie('token', token, { httpOnly: true, expires: expirationDate });
+        res.cookie('hasPass', !!user.password.toString(), { expires: expirationDate });
+        res.cookie('hasGoogleAccount', user.hasGoogleAccount.toString(), { expires: expirationDate });
+
+        res.json({
             id: user.id,
-            token: this.getJwtToken({ id: user.id }),
-        };
+            email: user.email,
+            token,
+        });
     }
 
 }

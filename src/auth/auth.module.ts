@@ -4,11 +4,12 @@ import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { User } from './entities/user.entity';
-import { JwtStrategy } from './strategies/jwt.strategy';
+import { AuthService } from './auth.service';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { User } from './entities/user.entity';
+import { envConfig } from '../../config/env.config';
 
 @Module({
     imports: [
@@ -20,9 +21,9 @@ import { GoogleStrategy } from './strategies/google.strategy';
             inject: [ConfigService],
             useFactory: (configService: ConfigService) => {
                 return {
-                    secret: configService.get('JWT_SECRET'),
+                    secret: envConfig().jwtSecret,
                     signOptions: {
-                        expiresIn: '24h',
+                        expiresIn: envConfig().jwtExpiresInHours + 'h',
                     },
                 };
             },
@@ -33,10 +34,6 @@ import { GoogleStrategy } from './strategies/google.strategy';
         AuthService,
         JwtStrategy,
         GoogleStrategy,
-        {
-            provide: 'AUTH_SERVICE',
-            useClass: AuthService,
-        },
     ],
     exports: [TypeOrmModule, JwtStrategy, PassportModule, JwtModule],
 })
