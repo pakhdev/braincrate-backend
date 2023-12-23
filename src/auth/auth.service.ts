@@ -66,24 +66,34 @@ export class AuthService {
         this.setAuthCookies(res, user);
     }
 
+    public async googleLogin(user: User, res: Response): Promise<void> {
+        if (user.id) {
+            const googleUser = await this.userRepository.findOne({
+                select: ['id', 'email', 'hasGoogleAccount', 'password'],
+                where: { id: user.id },
+            });
+            if (googleUser.hasGoogleAccount === false) {
+                googleUser.hasGoogleAccount = true;
+                await this.userRepository.save(googleUser);
+            }
+            this.setAuthCookies(res, googleUser, true);
+        } else {
+            const newUser = this.userRepository.create({
+                email: user.email,
+                hasGoogleAccount: true,
+            });
+            const savedUser = await this.userRepository.save(newUser);
+            this.setAuthCookies(res, savedUser, true);
+        }
+    }
+
     public logout(res: Response): Response<string> {
         res.clearCookie('token', { httpOnly: true, secure: envConfig().cookieSecureFlag });
         res.clearCookie('id', { secure: envConfig().cookieSecureFlag });
         res.clearCookie('email', { secure: envConfig().cookieSecureFlag });
         res.clearCookie('hasPass', { secure: envConfig().cookieSecureFlag });
         res.clearCookie('hasGoogleAccount', { secure: envConfig().cookieSecureFlag });
-        return res.send('Logout successful');
-    }
-
-    public async validateGoogleUser(email: string) {
-        const user = await this.userRepository.findOneBy({ email });
-        if (!user) throw new UnauthorizedException({ errorCode: 'userNotFound' });
-        return {
-            id: user.id,
-            email: user.email,
-            hasPass: !!user.password,
-            hasGoogleAccount: user.hasGoogleAccount,
-        };
+        return res.json({ message: 'Logged out successfully' });
     }
 
     public async isEmailRegistered(email: string): Promise<{ isRegistered: boolean }> {
@@ -164,7 +174,7 @@ export class AuthService {
         return this.jwtService.sign(payload);
     }
 
-    private setAuthCookies(res: Response, user: User): void {
+    private setAuthCookies(res: Response, user: User, redirect?: boolean): void {
         const token = this.getJwtToken({ id: user.id });
         const expirationDate = new Date();
         expirationDate.setSeconds(expirationDate.getSeconds() + envConfig().jwtExpiresInSeconds);
@@ -172,14 +182,12 @@ export class AuthService {
         res.cookie('id', user.id.toString(), { expires: expirationDate });
         res.cookie('email', user.email, { expires: expirationDate });
         res.cookie('token', token, { httpOnly: true, expires: expirationDate });
-        res.cookie('hasPass', !!user.password.toString(), { expires: expirationDate });
+        user.password
+            ? res.cookie('hasPass', !!user.password.toString(), { expires: expirationDate })
+            : res.cookie('hasPass', false, { expires: expirationDate });
         res.cookie('hasGoogleAccount', user.hasGoogleAccount.toString(), { expires: expirationDate });
 
-        res.json({
-            id: user.id,
-            email: user.email,
-            token,
-        });
+        redirect ? res.redirect(envConfig().frontEndUrl + '/dashboard') : res.json({ message: 'Success' });
     }
 
 }

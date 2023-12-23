@@ -5,6 +5,7 @@ export const envConfig = () => ({
     jwtExpiresInSeconds: Number(process.env.JWT_EXPIRATION_TIME_HOURS) * 60 * 60,
     jwtExpiresInHours: process.env.JWT_EXPIRATION_TIME_HOURS,
     cookieSecureFlag: process.env.COOKIE_SECURE_FLAG.toLowerCase() === 'true',
+    frontEndUrl: process.env.FRONTEND_URL,
 
     mysqlDbName: process.env.MYSQL_DB_NAME,
     mysqlHost: process.env.MYSQL_HOST,

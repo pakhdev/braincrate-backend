@@ -1,6 +1,6 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20';
+import { Profile, Strategy } from 'passport-google-oauth20';
 
 import { envConfig } from '../../../config/env.config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,16 +15,16 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
         super({
             clientID: envConfig().googleClientId,
             clientSecret: envConfig().googleClientSecret,
-            callbackURL: 'http://localhost:1337/api/auth/google-redirect',
+            callbackURL: 'http://localhost:1337/api/auth/google-login',
             scope: ['email'],
         });
     }
 
     async validate(
-        accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback,
-    ): Promise<void> {
+        accessToken: string, refreshToken: string, profile: Profile,
+    ): Promise<User | { email: string }> {
         const user = await this.userRepository.findOneBy({ email: profile.emails[0].value });
-        if (!user) throw new UnauthorizedException({ errorCode: 'userNotFound' });
-        done(null, user);
+        if (!user) return { email: profile.emails[0].value };
+        return user;
     }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, ParseIntPipe, Query, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, ParseIntPipe, Query, Res, Delete } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 
@@ -22,22 +22,15 @@ export class AuthController {
         return this.authService.login(loginUserDto, res);
     }
 
-    @Get('logout')
-    // @UseGuards(AuthGuard())
+    @Delete('logout')
     logout(@Res() res: Response) {
         return this.authService.logout(res);
     }
 
     @Get('google-login')
-    // @UseGuards(GoogleAuthGuard)
-    googleAuth() {
-        return { message: 'This route is protected by Google OAuth guard' };
-    }
-
-    @Get('google-redirect')
     @UseGuards(GoogleAuthGuard)
-    googleRedirect() {
-        return 'ok';
+    googleLogin(@GetUser() user: User, @Res() res: Response) {
+        return this.authService.googleLogin(user, res);
     }
 
     @Get('check-email')

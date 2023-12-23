@@ -12,7 +12,7 @@ export class User {
     @Column('varchar', { unique: true })
     email: string;
 
-    @Column('varchar', { select: false })
+    @Column('varchar', { select: false, nullable: true })
     password: string;
 
     @Column('boolean', { default: false })

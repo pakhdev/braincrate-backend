@@ -9,7 +9,7 @@ async function bootstrap() {
     const port = process.env.API_PORT;
     if (process.env.ENABLE_CORS.toLowerCase() === 'true')
         app.enableCors({
-            origin: process.env.CORS_ORIGIN,
+            origin: process.env.FRONTEND_URL,
             credentials: true,
         });
     app.setGlobalPrefix('api');
