@@ -7,16 +7,15 @@ import { Request } from 'express';
 
 import { User } from '../entities/user.entity';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
-import { ConfigService } from '@nestjs/config';
+import { envConfig } from '../../../config/env.config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(
         @InjectRepository(User) private readonly userRepository: Repository<User>,
-        configService: ConfigService,
     ) {
         super({
-            secretOrKey: configService.get('JWT_SECRET'),
+            secretOrKey: envConfig().jwtSecret,
             jwtFromRequest: ExtractJwt.fromExtractors([JwtStrategy.extractJWT]),
         });
     }

@@ -6,7 +6,6 @@ import { GetUser } from './decorators/get-user.decorator';
 import { CheckEmailDto, LoginUserDto, RegisterUserDto, UpdateEmailDto, UpdatePasswordDto, UpdateUserDto } from './dto';
 import { User } from './entities/user.entity';
 import { AuthService } from './auth.service';
-import { GoogleAuthGuard } from './guards/google-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -28,9 +27,16 @@ export class AuthController {
     }
 
     @Get('google-login')
-    @UseGuards(GoogleAuthGuard)
+    @UseGuards(AuthGuard('google-auth'))
     googleLogin(@GetUser() user: User, @Res() res: Response) {
         return this.authService.googleLogin(user, res);
+    }
+
+    @Get('link-google-account')
+    linkGoogleAccount(@Res() res) {
+        const dataToSend = { username: 'exampleUser', token: 'exampleToken' };
+        const script = `<script>window.opener.postMessage(${ JSON.stringify(dataToSend) }, '*');</script>`;
+        res.send(script);
     }
 
     @Get('check-email')

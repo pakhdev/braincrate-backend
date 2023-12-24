@@ -8,7 +8,7 @@ import { User } from '../entities/user.entity';
 import { Repository } from 'typeorm';
 
 @Injectable()
-export class GoogleStrategy extends PassportStrategy(Strategy) {
+export class GoogleAuthStrategy extends PassportStrategy(Strategy, 'google-auth') {
     constructor(
         @InjectRepository(User) private readonly userRepository: Repository<User>,
     ) {
