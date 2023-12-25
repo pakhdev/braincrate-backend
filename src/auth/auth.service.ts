@@ -23,6 +23,7 @@ import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { User } from './entities/user.entity';
 import { handleDBErrors } from '../common/helpers/handle-db-errors.helper';
 import { envConfig } from '../../config/env.config';
+import { ExtendedUser } from './interfaces/extended-user.interface';
 
 @Injectable()
 export class AuthService {
@@ -190,4 +191,23 @@ export class AuthService {
         redirect ? res.redirect(envConfig().frontEndUrl + '/dashboard') : res.json({ message: 'Success' });
     }
 
+    async linkGoogleAccount(user: ExtendedUser): Promise<{ message: string }> {
+        if (user.id && user.googleData.id && user.id !== user.googleData.id)
+            return { message: 'emailTaken' };
+        if (user.email !== user.googleData.email) {
+            const userToUpdate = await this.userRepository.preload({
+                id: user.id,
+                email: user.googleData.email,
+                hasGoogleAccount: true,
+            });
+            await this.userRepository.save(userToUpdate);
+            return { message: 'emailChanged' };
+        }
+        const userToUpdate = await this.userRepository.preload({
+            id: user.id,
+            hasGoogleAccount: true,
+        });
+        await this.userRepository.save(userToUpdate);
+        return { message: 'success' };
+    }
 }

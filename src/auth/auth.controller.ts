@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, ParseIntPipe, Query, Res, Delete } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Post,
+    Body,
+    Patch,
+    Param,
+    UseGuards,
+    ParseIntPipe,
+    Query,
+    Res,
+    Delete,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 
@@ -6,6 +18,7 @@ import { GetUser } from './decorators/get-user.decorator';
 import { CheckEmailDto, LoginUserDto, RegisterUserDto, UpdateEmailDto, UpdatePasswordDto, UpdateUserDto } from './dto';
 import { User } from './entities/user.entity';
 import { AuthService } from './auth.service';
+import { ExtendedUser } from './interfaces/extended-user.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -33,10 +46,10 @@ export class AuthController {
     }
 
     @Get('link-google-account')
-    linkGoogleAccount(@Res() res) {
-        const dataToSend = { username: 'exampleUser', token: 'exampleToken' };
-        const script = `<script>window.opener.postMessage(${ JSON.stringify(dataToSend) }, '*');</script>`;
-        res.send(script);
+    @UseGuards(AuthGuard('google-link'), AuthGuard('jwt'))
+    async linkGoogleAccount(@GetUser() user: ExtendedUser) {
+        const jsonToSend: { message: string } = await this.authService.linkGoogleAccount(user);
+        return `<script>window.opener.postMessage(${ JSON.stringify(jsonToSend) }, '*');</script>`;
     }
 
     @Get('check-email')

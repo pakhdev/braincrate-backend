@@ -9,6 +9,7 @@ import { GoogleAuthStrategy } from './strategies/google-auth.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { User } from './entities/user.entity';
 import { envConfig } from '../../config/env.config';
+import { GoogleLinkStrategy } from './strategies/google-link.strategy';
 
 @Module({
     imports: [
@@ -30,6 +31,7 @@ import { envConfig } from '../../config/env.config';
         AuthService,
         JwtStrategy,
         GoogleAuthStrategy,
+        GoogleLinkStrategy,
     ],
     exports: [TypeOrmModule, PassportModule, JwtModule],
 })
