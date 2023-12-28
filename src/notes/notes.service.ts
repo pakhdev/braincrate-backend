@@ -20,7 +20,7 @@ export class NotesService {
         private readonly reviewsService: ReviewsService,
     ) {}
 
-    async create(createNoteDto: CreateNoteDto, user: User): Promise<NoteOperationResponseDto> {
+    public async create(createNoteDto: CreateNoteDto, user: User): Promise<NoteOperationResponseDto> {
 
         const { title, content, difficulty, tags, removeAfterReviews } = createNoteDto;
 
@@ -56,7 +56,7 @@ export class NotesService {
         }
     }
 
-    async findOneById(id: number, user: User): Promise<Note> {
+    public async findOneById(id: number, user: User): Promise<Note> {
         const note = await this.notesRepository.findOne({
             where: { id, user: { id: user.id } },
             relations: ['tags', 'images'],
@@ -65,7 +65,7 @@ export class NotesService {
         return note;
     }
 
-    async findAll(getNotesDto: GetNotesDto, user: User): Promise<Note[]> {
+    public async findAll(getNotesDto: GetNotesDto, user: User): Promise<Note[]> {
         const { limit = 20, offset = 0, searchTerm, tagIds } = getNotesDto;
         const where: FindOptionsWhere<Note> = {
             user: { id: user.id },
@@ -77,7 +77,7 @@ export class NotesService {
         return await this.getNotesQuery(tagIds, where, offset, limit);
     }
 
-    async findAllForReview(user: User, getNotesForReviewDto: GetNotesForReviewDto): Promise<Note[]> {
+    public async findAllForReview(user: User, getNotesForReviewDto: GetNotesForReviewDto): Promise<Note[]> {
         const { limit = 20, offset = 0, tagIds } = getNotesForReviewDto;
         const where: FindOptionsWhere<Note> = {
             user: { id: user.id },
@@ -88,7 +88,7 @@ export class NotesService {
         return await this.getNotesQuery(tagIds, where, offset, limit);
     }
 
-    async countAllForReview(user: User): Promise<number> {
+    public async countAllForReview(user: User): Promise<number> {
         const where: FindOptionsWhere<Note> = {
             user: { id: user.id },
             removedAt: IsNull(),
@@ -98,7 +98,7 @@ export class NotesService {
         return await this.notesRepository.count({ where });
     }
 
-    async update(id: number, updateNoteDto: UpdateNoteDto, user: User): Promise<NoteOperationResponseDto> {
+    public async update(id: number, updateNoteDto: UpdateNoteDto, user: User): Promise<NoteOperationResponseDto> {
         try {
             let note = await this.findOneById(id, user);
             const {
@@ -129,7 +129,7 @@ export class NotesService {
         }
     }
 
-    async updateNoteReviewStatus(id: number, user: User, action: string): Promise<NoteOperationResponseDto> {
+    public async updateNoteReviewStatus(id: number, user: User, action: string): Promise<NoteOperationResponseDto> {
         try {
             let note = await this.findOneById(id, user);
             const { difficulty } = note;
@@ -166,7 +166,7 @@ export class NotesService {
         }
     }
 
-    async remove(id: number, user: User): Promise<NoteOperationResponseDto> {
+    public async remove(id: number, user: User): Promise<NoteOperationResponseDto> {
         try {
 
             let note = await this.findOneById(id, user);
@@ -183,7 +183,7 @@ export class NotesService {
         }
     }
 
-    async restore(id: number, user: User): Promise<NoteOperationResponseDto> {
+    public async restore(id: number, user: User): Promise<NoteOperationResponseDto> {
         try {
 
             let note = await this.findOneById(id, user);

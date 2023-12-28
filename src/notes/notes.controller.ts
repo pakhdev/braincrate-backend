@@ -48,12 +48,7 @@ export class NotesController {
 
     @Patch('cancel-reviews/:id')
     cancelReviews(@Param('id', ParseIntPipe) id: string, @GetUser() user: User) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(this.notesService.updateNoteReviewStatus(+id, user, 'cancelReviews'));
-            }, 1000);
-        });
-        // return this.notesService.updateNoteReviewStatus(+id, user, 'cancelReviews');
+        return this.notesService.updateNoteReviewStatus(+id, user, 'cancelReviews');
     }
 
     @Patch('reset-reviews/:id')

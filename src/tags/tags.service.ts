@@ -14,27 +14,7 @@ export class TagsService {
         @InjectRepository(Tag) private readonly tagsRepository: Repository<Tag>,
     ) {}
 
-    async incrementCountOrCreate(name: string, user: User): Promise<Tag> {
-        const tag = await this.findByName(name, user);
-        if (tag) {
-            tag.notesCount++;
-            return await this.tagsRepository.save(tag);
-        }
-        return await this.tagsRepository.save(
-            this.tagsRepository.create({ name, notesCount: 1, user }),
-        );
-    }
-
-    async decrementCountOrRemove(tag: Tag): Promise<Tag> {
-        tag.notesCount--;
-        if (tag.notesCount > 0) {
-            return await this.tagsRepository.save(tag);
-        }
-        await this.tagsRepository.remove(tag);
-        return { id: tag.id, name: tag.name, notesCount: 0 } as Tag;
-    }
-
-    async findAll(getSubtagsDto: GetSubtagsDto, user: User): Promise<TagsResponseDto[]> {
+    public async findAll(getSubtagsDto: GetSubtagsDto, user: User): Promise<TagsResponseDto[]> {
         const { parentTagIds, searchTerm } = getSubtagsDto;
         const userId = user.id;
 
@@ -44,30 +24,13 @@ export class TagsService {
         return await this.getTagsThroughNotes(parentTagIds, searchTerm, userId, 'all');
     }
 
-    async findTagsForReview(getSubtagsDto: GetSubtagsDto, user: User): Promise<TagsResponseDto[]> {
+    public async findTagsForReview(getSubtagsDto: GetSubtagsDto, user: User): Promise<TagsResponseDto[]> {
         const { parentTagIds } = getSubtagsDto;
         const userId = user.id;
         return await this.getTagsThroughNotes(parentTagIds, '', userId, 'for-review');
     }
 
-    async findByName(name: string, user: User): Promise<Tag> {
-        return await this.tagsRepository.findOneBy({
-            name,
-            user: { id: user.id },
-        });
-    }
-
-    async findByIds(tagIds: number[], user: User): Promise<Tag[]> {
-        return await this.tagsRepository.find({
-            select: ['id', 'name', 'notesCount'],
-            where: {
-                id: In(tagIds),
-                user: { id: user.id },
-            },
-        });
-    }
-
-    async findTagsWithoutNotesForReview(user: User, tagIds: number[]): Promise<Tag[]> {
+    public async findTagsWithoutNotesForReview(user: User, tagIds: number[]): Promise<Tag[]> {
         const query = this.tagsRepository
             .createQueryBuilder('tag')
             .select('tag.id')
@@ -90,7 +53,7 @@ export class TagsService {
         });
     }
 
-    async prepareTagsList(oldTags: Tag[], newTagNames: string[], user: User): Promise<{
+    public async prepareTagsList(oldTags: Tag[], newTagNames: string[], user: User): Promise<{
         resultTags: Tag[],
         touchedTags: Tag[]
     }> {
@@ -123,7 +86,44 @@ export class TagsService {
         return { resultTags, touchedTags };
     }
 
-    private async getTagsThroughNotes(parentTagIds: number[], searchTerm: string, userId: number, notesType: string) {
+    private async findByName(name: string, user: User): Promise<Tag> {
+        return await this.tagsRepository.findOneBy({
+            name,
+            user: { id: user.id },
+        });
+    }
+
+    private async findByIds(tagIds: number[], user: User): Promise<Tag[]> {
+        return await this.tagsRepository.find({
+            select: ['id', 'name', 'notesCount'],
+            where: {
+                id: In(tagIds),
+                user: { id: user.id },
+            },
+        });
+    }
+
+    private async incrementCountOrCreate(name: string, user: User): Promise<Tag> {
+        const tag = await this.findByName(name, user);
+        if (tag) {
+            tag.notesCount++;
+            return await this.tagsRepository.save(tag);
+        }
+        return await this.tagsRepository.save(
+            this.tagsRepository.create({ name, notesCount: 1, user }),
+        );
+    }
+
+    private async decrementCountOrRemove(tag: Tag): Promise<Tag> {
+        tag.notesCount--;
+        if (tag.notesCount > 0) {
+            return await this.tagsRepository.save(tag);
+        }
+        await this.tagsRepository.remove(tag);
+        return { id: tag.id, name: tag.name, notesCount: 0 } as Tag;
+    }
+
+    private async getTagsThroughNotes(parentTagIds: number[], searchTerm: string, userId: number, notesType: string): Promise<TagsResponseDto[]> {
 
         // Generando la sub petición con la librería TypeORM
         // tarda x20 más que la petición SQL nativa
@@ -145,7 +145,10 @@ export class TagsService {
         }));
     }
 
-    private findNoteIdsByCriteria(parentTagIds: number[], searchTerm: string, userId: number, notesType: string) {
+    private findNoteIdsByCriteria(parentTagIds: number[], searchTerm: string, userId: number, notesType: string): {
+        query: string,
+        parameters: { userId: number }
+    } {
 
         const parameters = { userId };
         const selectOptions = ['SELECT note.id AS note_id FROM note'];

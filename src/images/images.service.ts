@@ -22,43 +22,7 @@ export class ImagesService {
 
     constructor(@InjectRepository(Image) private readonly imagesRepository: Repository<Image>) {}
 
-    async create(image: SaveImageDto, user: User): Promise<Image> {
-
-        let largeImageName: string | null = null;
-
-        const initialImageName = await this.checkAndSaveFile(
-            image.initialImage,
-            this.maxInitialImageWidth,
-            this.maxInitialImageHeight,
-            `${ user.id }_${ Date.now() }.jpg`);
-
-        if (image.largeImage) {
-            largeImageName = await this.checkAndSaveFile(
-                image.largeImage,
-                this.maxLargeImageWidth,
-                this.maxLargeImageHeight,
-                `large_${ user.id }_${ Date.now() }.jpg`);
-        }
-
-        const newImage = this.imagesRepository.create({
-            fileName: initialImageName,
-            largeImage: largeImageName,
-            user,
-        });
-        return await this.imagesRepository.save(newImage);
-    }
-
-    async findAllByNoteId(noteId: number, user: User): Promise<Image[]> {
-        return await this.imagesRepository.findBy({ note: { id: noteId }, user: { id: user.id } });
-    }
-
-    async findOneById(id: number, user: User): Promise<Image> {
-        const image = await this.imagesRepository.findOneBy({ id, user: { id: user.id } });
-        if (!image) throw new BadRequestException('Imagen no encontrada');
-        return image;
-    }
-
-    async markForRemovingByNoteId(noteId: number, user: User): Promise<void> {
+    public async markForRemovingByNoteId(noteId: number, user: User): Promise<void> {
         let images = await this.findAllByNoteId(noteId, user);
         images.map(image => {
             image.removedAt = new Date();
@@ -67,7 +31,7 @@ export class ImagesService {
         await this.imagesRepository.save(images);
     }
 
-    async restoreByNoteId(noteId: number, user: User): Promise<void> {
+    public async restoreByNoteId(noteId: number, user: User): Promise<void> {
         let images = await this.findAllByNoteId(noteId, user);
         images.map(image => {
             image.removedAt = null;
@@ -76,20 +40,29 @@ export class ImagesService {
         await this.imagesRepository.save(images);
     }
 
-    async removeImageFile(id: number): Promise<void> {
+    public async clearOrphanedImages(previouslyUploadedIds: number[], currentImages: Image[]): Promise<void> {
+        for (const id of previouslyUploadedIds) {
+            const isOrphaned = !currentImages.find((image) => image.id === id);
+            if (isOrphaned) await this.removeImageFile(+id);
+        }
+    }
+
+    public async purgeImageFilesAndRecords(ids: number[]): Promise<void> {
         try {
-            const image = await this.imagesRepository.findOneBy({ id });
-            await fsPromises.unlink(`${ this.imgDir }/${ image.fileName }`);
-            if (image.largeImage) {
-                await fsPromises.unlink(`${ this.imgDir }/${ image.largeImage }`);
-            }
-            await this.imagesRepository.remove(image);
+            const images = await this.imagesRepository.findBy({ id: In(ids) });
+            images.forEach(image => {
+                fsPromises.unlink(`${ this.imgDir }/${ image.fileName }`);
+                if (image.largeImage) {
+                    fsPromises.unlink(`${ this.imgDir }/${ image.largeImage }`);
+                }
+            });
+            await this.imagesRepository.remove(images);
         } catch (error) {
             throw new BadRequestException('Error al eliminar la imagen');
         }
     }
 
-    async processAndManageImagesInHTML(htmlCode: string, note: Note, user: User): Promise<{
+    public async processAndManageImagesInHTML(htmlCode: string, note: Note, user: User): Promise<{
         noteHtml: string,
         noteImages: Image[],
         previouslyUploadedIds: number[],
@@ -161,23 +134,50 @@ export class ImagesService {
         }
     }
 
-    async clearOrphanedImages(previouslyUploadedIds: number[], currentImages: Image[]) {
-        for (const id of previouslyUploadedIds) {
-            const isOrphaned = !currentImages.find((image) => image.id === id);
-            if (isOrphaned) await this.removeImageFile(+id);
+    private async create(image: SaveImageDto, user: User): Promise<Image> {
+
+        let largeImageName: string | null = null;
+
+        const initialImageName = await this.checkAndSaveFile(
+            image.initialImage,
+            this.maxInitialImageWidth,
+            this.maxInitialImageHeight,
+            `${ user.id }_${ Date.now() }.jpg`);
+
+        if (image.largeImage) {
+            largeImageName = await this.checkAndSaveFile(
+                image.largeImage,
+                this.maxLargeImageWidth,
+                this.maxLargeImageHeight,
+                `large_${ user.id }_${ Date.now() }.jpg`);
         }
+
+        const newImage = this.imagesRepository.create({
+            fileName: initialImageName,
+            largeImage: largeImageName,
+            user,
+        });
+        return await this.imagesRepository.save(newImage);
     }
 
-    async purgeImageFilesAndRecords(ids: number[]): Promise<void> {
+    private async findAllByNoteId(noteId: number, user: User): Promise<Image[]> {
+        return await this.imagesRepository.findBy({ note: { id: noteId }, user: { id: user.id } });
+    }
+
+    private async findOneById(id: number, user: User): Promise<Image> {
+        const image = await this.imagesRepository.findOneBy({ id, user: { id: user.id } });
+        if (!image) throw new BadRequestException('Imagen no encontrada');
+        return image;
+    }
+
+    private async removeImageFile(id: number): Promise<void> {
         try {
-            const images = await this.imagesRepository.findBy({ id: In(ids) });
-            images.forEach(image => {
-                fsPromises.unlink(`${ this.imgDir }/${ image.fileName }`);
-                if (image.largeImage) {
-                    fsPromises.unlink(`${ this.imgDir }/${ image.largeImage }`);
-                }
-            });
-            await this.imagesRepository.remove(images);
+            const image = await this.imagesRepository.findOneBy({ id });
+            await fsPromises.unlink(`${ this.imgDir }/${ image.fileName }`);
+            if (image.largeImage) {
+                await fsPromises.unlink(`${ this.imgDir }/${ image.largeImage }`);
+            }
+            await this.imagesRepository.remove(image);
         } catch (error) {
             throw new BadRequestException('Error al eliminar la imagen');
         }

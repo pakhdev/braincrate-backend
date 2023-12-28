@@ -8,7 +8,7 @@ export class ReviewsService {
     private readonly mediumReviewSchedule: number[] = [1, 3, 7, 21, 60];
     private readonly hardReviewSchedule: number[] = [1, 3, 7, 21, 60, 90, 182];
 
-    getNextReviewDate(difficulty: Difficulty, reviewsLeft: number): Date {
+    public getNextReviewDate(difficulty: Difficulty, reviewsLeft: number): Date {
 
         const oneDay = 24 * 60 * 60 * 1000;
         let schedule: number[] | undefined;
@@ -31,7 +31,7 @@ export class ReviewsService {
         }
     }
 
-    getNumberOfReviewsForDifficulty(difficulty: Difficulty): number {
+    public getNumberOfReviewsForDifficulty(difficulty: Difficulty): number {
         switch (difficulty) {
             case Difficulty.Easy:
                 return this.easyReviewSchedule.length;

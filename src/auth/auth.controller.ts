@@ -4,9 +4,7 @@ import {
     Post,
     Body,
     Patch,
-    Param,
     UseGuards,
-    ParseIntPipe,
     Query,
     Res,
     Delete,
@@ -15,7 +13,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Response } from 'express';
 
 import { GetUser } from './decorators/get-user.decorator';
-import { CheckEmailDto, LoginUserDto, RegisterUserDto, UpdateEmailDto, UpdatePasswordDto, UpdateUserDto } from './dto';
+import { CheckEmailDto, LoginUserDto, RegisterUserDto, UpdateEmailDto, UpdatePasswordDto } from './dto';
 import { User } from './entities/user.entity';
 import { AuthService } from './auth.service';
 import { ExtendedUser } from './interfaces/extended-user.interface';
@@ -47,9 +45,9 @@ export class AuthController {
 
     @Get('link-google-account')
     @UseGuards(AuthGuard('google-link'), AuthGuard('jwt'))
-    async linkGoogleAccount(@GetUser() user: ExtendedUser) {
-        const jsonToSend: { message: string } = await this.authService.linkGoogleAccount(user);
-        return `<script>window.opener.postMessage(${ JSON.stringify(jsonToSend) }, '*');</script>`;
+    async linkGoogleAccount(@GetUser() user: ExtendedUser, @Res() res: Response) {
+        const jsonToSend: { message: string, newEmail?: string } = await this.authService.linkGoogleAccount(user, res);
+        res.send(`<script>window.opener.postMessage(${ JSON.stringify(jsonToSend) }, '*');</script>`);
     }
 
     @Get('check-email')
@@ -67,16 +65,6 @@ export class AuthController {
     @UseGuards(AuthGuard())
     updatePassword(@GetUser() user: User, @Body() updatePasswordDto: UpdatePasswordDto, @Res() res: Response) {
         return this.authService.updatePassword(user, updatePasswordDto, res);
-    }
-
-    @Patch('update/:id')
-    @UseGuards(AuthGuard())
-    updateUser(
-        @Param('id', ParseIntPipe) id: number,
-        @GetUser() user: User,
-        @Body() updateUserDto: UpdateUserDto,
-        @Res() res: Response) {
-        return this.authService.update(id, user, updateUserDto, res);
     }
 
     @Get('check-auth-status')
