@@ -168,7 +168,6 @@ export class NotesService {
 
     public async remove(id: number, user: User): Promise<NoteOperationResponseDto> {
         try {
-
             let note = await this.findOneById(id, user);
             if (note.removedAt) return { errors: 'Nota no encontrada', note: null, tags: null };
 
@@ -185,7 +184,6 @@ export class NotesService {
 
     public async restore(id: number, user: User): Promise<NoteOperationResponseDto> {
         try {
-
             let note = await this.findOneById(id, user);
             if (!note.removedAt) return {
                 errors: 'Nota no encontrada o no se encuentra eliminada',

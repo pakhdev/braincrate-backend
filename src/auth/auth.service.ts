@@ -133,7 +133,7 @@ export class AuthService {
         if (!userToUpdate)
             throw new NotFoundException({ errorCode: 'userNotFound' });
         if (userToUpdate.password === null)
-            throw new NotFoundException({ errorCode: 'setPasswordBeforeEmailUpdate' });
+            throw new BadRequestException({ errorCode: 'setPasswordBeforeEmailUpdate' });
         try {
             const updatedUser = await this.userRepository.save(userToUpdate);
             this.setAuthCookies(res, updatedUser);
