@@ -118,6 +118,7 @@ export class NotesService {
                 tags: resultTags,
                 images: noteImages,
                 updatedAt: new Date(),
+                difficulty: updateNoteDto.difficulty,
                 removeAfterReviews: updateNoteDto.removeAfterReviews,
             };
 
