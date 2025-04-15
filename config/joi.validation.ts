@@ -5,6 +5,7 @@ export const JoiValidationSchema = Joi.object({
         .valid('development', 'production', 'test')
         .default('development'),
     API_PORT: Joi.number().default(3003),
+    API_PREFIX: Joi.string().allow('').default(''),
     MAX_JSON_PAYLOAD: Joi.string().default('50mb'),
     JWT_SECRET: Joi.string().required(),
     JWT_EXPIRATION_TIME_HOURS: Joi.string().default('24'),
@@ -20,4 +21,6 @@ export const JoiValidationSchema = Joi.object({
 
     GOOGLE_CLIENT_ID: Joi.string().required(),
     GOOGLE_CLIENT_SECRET: Joi.string().required(),
+    GOOGLE_LINK_URL: Joi.string().required(),
+    GOOGLE_AUTH_URL: Joi.string().required(),
 });

@@ -15,7 +15,7 @@ export class GoogleLinkStrategy extends PassportStrategy(Strategy, 'google-link'
         super({
             clientID: envConfig().googleClientId,
             clientSecret: envConfig().googleClientSecret,
-            callbackURL: 'http://localhost:1337/api/auth/link-google-account',
+            callbackURL: envConfig().googleLinkUrl,
             scope: ['email'],
         });
     }

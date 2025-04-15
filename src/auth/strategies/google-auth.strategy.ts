@@ -15,7 +15,7 @@ export class GoogleAuthStrategy extends PassportStrategy(Strategy, 'google-auth'
         super({
             clientID: envConfig().googleClientId,
             clientSecret: envConfig().googleClientSecret,
-            callbackURL: 'http://localhost:1337/api/auth/google-login',
+            callbackURL: envConfig().googleAuthUrl,
             scope: ['email'],
         });
     }

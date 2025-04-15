@@ -1,5 +1,6 @@
 export const envConfig = () => ({
     environment: process.env.NODE_ENV,
+    apiPrefix: process.env.API_PREFIX,
     port: process.env.API_PORT,
     jwtSecret: process.env.JWT_SECRET,
     jwtExpiresInSeconds: Number(process.env.JWT_EXPIRATION_TIME_HOURS) * 60 * 60,
@@ -17,4 +18,6 @@ export const envConfig = () => ({
 
     googleClientId: process.env.GOOGLE_CLIENT_ID,
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    googleLinkUrl: process.env.GOOGLE_LINK_URL,
+    googleAuthUrl: process.env.GOOGLE_AUTH_URL,
 });

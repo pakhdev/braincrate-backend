@@ -3,6 +3,8 @@
 /node_modules
 /docker
 *.env
+.env*
+!.env.template
 .eslintrc.js
 .prettierrc
 public/image_files/*.jpg

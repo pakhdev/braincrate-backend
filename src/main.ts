@@ -8,6 +8,7 @@ import { SwaggerModule } from '@nestjs/swagger';
 import { swaggerConfig } from '../config/swagger.config';
 
 async function bootstrap() {
+    console.log('ENV', process.env.NODE_ENV);
     const app = await NestFactory.create(AppModule);
     const port = process.env.API_PORT;
     if (process.env.ENABLE_CORS.toLowerCase() === 'true')
@@ -15,7 +16,7 @@ async function bootstrap() {
             origin: process.env.FRONTEND_URL,
             credentials: true,
         });
-    app.setGlobalPrefix('api');
+    app.setGlobalPrefix(process.env.API_PREFIX);
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
@@ -27,7 +28,7 @@ async function bootstrap() {
     SwaggerModule.setup('api-docs', app, document);
 
     app.use(json({ limit: process.env.MAX_JSON_PAYLOAD }));
-    await app.listen(port, () => console.log(`BrainCrate API. Puerto: ${ port }`));
+    await app.listen(port, () => console.log(`BrainCrate API. Puerto: ${ port }. Modo: ${ process.env.NODE_ENV }`));
 }
 
 bootstrap();

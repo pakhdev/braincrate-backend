@@ -15,6 +15,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         ConfigModule.forRoot({
             load: [envConfig],
             validationSchema: JoiValidationSchema,
+            envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env',
         }),
         TypeOrmModule.forRoot({
             type: 'mysql',
